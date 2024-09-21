@@ -1,0 +1,47 @@
+// This function parses the most recent email based on the subject line and imports data into a Google Sheet.
+
+function getLatestEmail() {
+  // Replace 'your-email@gmail.com' with the email address you want to search
+  const searchQuery = 'from:your-email@gmail.com subject:"[Subject Line]" has:attachment';
+
+  // Search Gmail for the most recent email matching the search query
+  const threads = GmailApp.search(searchQuery, 0, 1);
+  if (threads.length === 0) {
+    Logger.log('No emails found matching the query.');
+    return;
+  }
+
+  const message = threads[0].getMessages()[0];
+  const attachments = message.getAttachments();
+  
+  if (attachments.length === 0) {
+    Logger.log('No attachments found in the email.');
+    return;
+  }
+
+  const sheet = SpreadsheetApp.openById('your-google-sheet-id'); // Replace with your Google Sheet ID
+  const sheetTab = sheet.getSheetByName('Sheet1'); // Replace with your sheet name if necessary
+  
+  const csvData = Utilities.parseCsv(attachments[0].getDataAsString());
+  sheetTab.clear(); // Optional: Clears previous data from the sheet
+  sheetTab.getRange(1, 1, csvData.length, csvData[0].length).setValues(csvData);
+  
+  Logger.log('Data imported successfully.');
+}
+
+// This function sets up a time-based trigger to run the script automatically
+function setUpTrigger() {
+  ScriptApp.newTrigger('getLatestEmail')
+    .timeBased()
+    .everyDays(1) // Customize trigger frequency (e.g., every day)
+    .atHour(9) // Customize time of the day (e.g., 9 AM)
+    .create();
+}
+
+// To delete any previous triggers (optional)
+function deleteTriggers() {
+  const triggers = ScriptApp.getProjectTriggers();
+  for (let i = 0; i < triggers.length; i++) {
+    ScriptApp.deleteTrigger(triggers[i]);
+  }
+}
